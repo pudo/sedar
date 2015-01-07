@@ -1,5 +1,6 @@
+import time
 import os
-import glob
+#import glob
 import subprocess
 from tempfile import NamedTemporaryFile
 
@@ -65,18 +66,23 @@ def make_cracked_session():
     failed = True
     print "Trying to break captcha...."
     while failed:
-        sess = requests.Session()
-        res = sess.get(CHALLENGE)
-        doc = html.fromstring(res.content)
-        srcs = [urljoin(CHALLENGE, i.get('src')) for i in doc.findall('.//img')]
-        code = break_captcha(srcs)
-        resp_url = urljoin(CHALLENGE, doc.find('.//form').get('action'))
-        print "Guessed captcha", code
-        res = sess.post(resp_url, data={'code': code})
-        failed = 'did not match' in res.content
-        #print res.content
-        print "Did it blend?", not failed
+        try:
+            sess = requests.Session()
+            res = sess.get(CHALLENGE)
+            doc = html.fromstring(res.content)
+            srcs = [urljoin(CHALLENGE, i.get('src')) for i in doc.findall('.//img')]
+            code = break_captcha(srcs)
+            if len(code) != len(srcs):
+                print "Wrong length guess", code
+                continue
+            resp_url = urljoin(CHALLENGE, doc.find('.//form').get('action'))
+            print "Guessed captcha", code
+            res = sess.post(resp_url, data={'code': code})
+            failed = 'did not match' in res.content
+            #print res.content
+            print "Did it blend?", not failed
+        except Exception, e:
+            print e
+            time.sleep(15)
     return sess
 
-
-make_cracked_session()

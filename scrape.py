@@ -1,3 +1,4 @@
+import os
 import requests
 import dataset
 from itertools import count
@@ -5,6 +6,7 @@ from urlparse import urljoin
 from lxml import html
 from datetime import datetime, timedelta
 from slugify import slugify
+from werkzeug.util import secure_filename
 
 INDUSTRIES = '046,047,005,006,058,025'
 TO_DATE = datetime.utcnow()
@@ -32,6 +34,7 @@ print PARAMS
 engine = dataset.connect('postgresql://localhost/sedar')
 filing = engine['filing']
 company = engine['company']
+sess = {}
 
 
 def chomp_name(key):
@@ -62,6 +65,34 @@ def get_company(url):
             key = None
         #print url, html.tostring(row)
     company.upsert(data, ['url'])
+
+
+def download_document(form):
+    file_name = form.split('/filings/', 1)[-1]
+    file_name = os.path.join('filings', file_name)
+    if os.path.exists(file_name):
+        return file_name
+
+    from breaker import make_cracked_session
+    print "Downloading", [form]
+    if 'ca' not in sess or sess['ca'] is None:
+        sess['ca'] = make_cracked_session()
+
+    res = sess['ca'].get(form)
+    if 'x-powered-by' in res.headers or \
+            'Accept Terms of Use' in res.content:
+        sess['ca'] = make_cracked_session()
+        return download_document(form)
+
+    try:
+        os.makedirs(os.path.dirname(file_name))
+    except:
+        pass
+
+    with open(file_name, 'wb') as fh:
+        fh.write(res.content)
+
+    return file_name
 
 
 def load_filings():
@@ -96,6 +127,7 @@ def load_filings():
             }
             filing.upsert(data, ['filing'])
             get_company(data['company_url'])
+            download_document(data.get('tos_form'))
 
         if page_hits == 0:
             return
