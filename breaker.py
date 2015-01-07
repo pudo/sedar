@@ -13,30 +13,41 @@ CHALLENGE = 'http://www.sedar.com/GetFile.do?lang=EN&docClass=13&issuerNo=000202
 RESPONSE = 'http://www.sedar.com/CheckCode.do'
 
 
+def temp_name():
+    tmp = NamedTemporaryFile()
+    name = tmp.name
+    tmp.close()
+    return name
+
+
 def improve_image(image):
     null = os.open('/dev/null', os.O_APPEND)
-    tmp = NamedTemporaryFile().name + '.jpg'
+    tmp = temp_name() + '.jpg'
     args = ['/usr/local/bin/gm', 'convert']
     #args.extend(['-contrast', '-modulate', '110', '-sharpen', '0x1.0'])
-    args.extend(['-contrast', '-contrast', '-contrast', '-contrast', '-contrast',
-                 '-modulate', '110',
-                 '-antialias', '-despeckle', '-despeckle', '-despeckle',
-                 '-despeckle'])
+    args.extend(['-contrast', '-contrast', '-contrast', '-contrast',
+                 '-contrast', '-contrast',
+                 '-modulate', '120',
+                 '-sharpen', '0x1.0', '-antialias', '-despeckle',
+                 '-despeckle', '-despeckle',
+                 '-despeckle', '-despeckle', '-despeckle'])
     args.extend([image, tmp])
     p = subprocess.Popen(args, stdout=null, stderr=null)
     p.wait()
-    #print tmp
+    os.close(null)
     return tmp
         
 
 def run_ocr(image):
     null = os.open('/dev/null', os.O_APPEND)
-    tmp = NamedTemporaryFile()
+    tmp = temp_name()
     #print tmp.name
-    args = ['/usr/local/bin/tesseract', image, tmp.name, '-l', 'eng', '-psm', '8']
+    print "OCRing", image
+    args = ['/usr/local/bin/tesseract', image, tmp, '-l', 'eng', '-psm', '8']
     p = subprocess.Popen(args, stdout=null, stderr=null)
     p.wait()
-    with open(tmp.name + '.txt', 'rb') as fh:
+    os.close(null)
+    with open(tmp + '.txt', 'rb') as fh:
         return fh.read().strip()
 
 
@@ -45,7 +56,7 @@ def break_captcha(srcs):
     
     for src in srcs:
         res = requests.get(src)
-        tmp = NamedTemporaryFile().name + '.jpg'
+        tmp = temp_name() + '.jpg'
         with open(tmp, 'wb') as fh:
             fh.write(res.content)
 

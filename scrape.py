@@ -1,12 +1,13 @@
 import os
 import requests
 import dataset
+import urllib
 from itertools import count
 from urlparse import urljoin
 from lxml import html
 from datetime import datetime, timedelta
 from slugify import slugify
-from werkzeug.util import secure_filename
+from werkzeug.utils import secure_filename
 
 INDUSTRIES = '046,047,005,006,058,025'
 TO_DATE = datetime.utcnow()
@@ -69,7 +70,9 @@ def get_company(url):
 
 def download_document(form):
     file_name = form.split('/filings/', 1)[-1]
-    file_name = os.path.join('filings', file_name)
+    filing_id, doc_id, rest = file_name.split('/', 2)
+    rest = secure_filename(urllib.unquote(rest))
+    file_name = os.path.join('filings', filing_id, doc_id, rest)
     if os.path.exists(file_name):
         return file_name
 
@@ -114,20 +117,22 @@ def load_filings():
             page_hits += 1
             filing_id = submit.split('fileName=', 1)[-1]
             print 'Filing', [filing_id]
+            form = urljoin(RESULT_PAGE, submit)
+            file_name = download_document(form)
             data = {
                 'filing': filing_id,
+                'file_name': file_name,
                 'company': cells[0].text_content().strip(),
                 'company_url': urljoin(RESULT_PAGE, cells[0].find('./a').get('href')),
                 'date': cells[1].text_content().strip(),
                 'time': cells[2].text_content().strip(),
                 'type': cells[3].text_content().strip(),
-                'tos_form': urljoin(RESULT_PAGE, submit),
+                'tos_form': form,
                 'format': cells[4].text_content().strip(),
                 'size': cells[5].text_content().strip()
             }
             filing.upsert(data, ['filing'])
             get_company(data['company_url'])
-            download_document(data.get('tos_form'))
 
         if page_hits == 0:
             return
