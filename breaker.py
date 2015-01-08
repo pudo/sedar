@@ -13,6 +13,13 @@ CHALLENGE = 'http://www.sedar.com/GetFile.do?lang=EN&docClass=13&issuerNo=000202
 RESPONSE = 'http://www.sedar.com/CheckCode.do'
 
 
+def bin_name(*a):
+    for path in a:
+        if os.path.isfile(path):
+            return path
+    raise ValueError('No binary available: %r' % a)
+
+
 def temp_name():
     tmp = NamedTemporaryFile()
     name = tmp.name
@@ -23,7 +30,7 @@ def temp_name():
 def improve_image(image):
     null = os.open('/dev/null', os.O_APPEND)
     tmp = temp_name() + '.jpg'
-    args = ['/usr/local/bin/gm', 'convert']
+    args = [bin_name('/usr/local/bin/gm', '/usr/bin/gm'), 'convert']
     #args.extend(['-contrast', '-modulate', '110', '-sharpen', '0x1.0'])
     args.extend(['-contrast', '-contrast', '-contrast', '-contrast',
                  '-contrast', '-contrast',
@@ -43,7 +50,8 @@ def run_ocr(image):
     tmp = temp_name()
     #print tmp.name
     print "OCRing", image
-    args = ['/usr/local/bin/tesseract', image, tmp, '-l', 'eng', '-psm', '8']
+    bin_ = bin_name('/usr/local/bin/tesseract', '/usr/bin/tesseract')
+    args = [bin_, image, tmp, '-l', 'eng', '-psm', '8']
     p = subprocess.Popen(args, stdout=null, stderr=null)
     p.wait()
     os.close(null)

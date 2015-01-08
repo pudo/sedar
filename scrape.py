@@ -12,7 +12,7 @@ from werkzeug.utils import secure_filename
 INDUSTRIES = '046,047,005,006,058,025'
 TO_DATE = datetime.utcnow()
 FROM_DATE = TO_DATE - timedelta(days=10 * 365)
-FROM_DATE = TO_DATE - timedelta(days=10)
+FROM_DATE = TO_DATE - timedelta(days=10 * 365)
 
 SEARCH_PAGE = 'http://www.sedar.com/search/search_form_pc_en.htm'
 RESULT_PAGE = 'http://www.sedar.com/FindCompanyDocuments.do'
